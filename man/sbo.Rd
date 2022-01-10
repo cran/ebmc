@@ -2,7 +2,7 @@
 \alias{sbo}
 \title{Implementation of SMOTEBoost}
 \usage{
-sbo(formula, data, size, alg, over = 100, rf.ntree = 50, svm.ker = "radial")
+sbo(formula, data, size, alg, over = 100, smote.k = 5, rf.ntree = 50, svm.ker = "radial")
 }
 \arguments{
   \item{formula}{A formula specify predictors and target variable. Target variable should be a factor of 0 and 1. Predictors can be either numerical and categorical.}
@@ -10,6 +10,7 @@ sbo(formula, data, size, alg, over = 100, rf.ntree = 50, svm.ker = "radial")
   \item{size}{Ensemble size, i.e. number of weak learners in the ensemble model.}
   \item{alg}{The learning algorithm used to train weak learners in the ensemble model. \emph{cart}, \emph{c50}, \emph{rf}, \emph{nb}, and \emph{svm} are available. Please see Details for more information.}
   \item{over}{Specifying over-sampling rate of SMOTE. Only multiple of 100 is acceptable.}
+  \item{smote.k}{Number of k applied in SMOTE algorithm. Default is 5.}
   \item{rf.ntree}{Number of decision trees in each forest of the ensemble model when using \emph{rf} (Random Forest) as base learner. Integer is required.}
   \item{svm.ker}{Specifying kernel function when using svm as base algorithm. Four options are available: \bold{linear}, \bold{polynomial}, \bold{radial}, and \bold{sigmoid}. Default is radial. Equivalent to that in e1071::svm().}
 }

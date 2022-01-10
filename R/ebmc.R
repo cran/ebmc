@@ -37,6 +37,8 @@ setClass("modelBst", representation = "list")
 adam2 <- function(formula, data, size, alg, rf.ntree = 50, svm.ker = "radial")
 {
   target <- gsub(" ", "", unlist(strsplit(format(formula), split = "~"))[1])
+  data[ ,target] <- as.factor(data[ ,target])
+
   list_model <- list()
   a <- 0
   w <- rep(1/nrow(data), nrow(data))
@@ -81,6 +83,8 @@ adam2 <- function(formula, data, size, alg, rf.ntree = 50, svm.ker = "radial")
 rus <- function(formula, data, size, alg, ir = 1, rf.ntree = 50, svm.ker = "radial")
 {
   target <- gsub(" ", "", unlist(strsplit(format(formula), split = "~"))[1])
+  data[ ,target] <- as.factor(data[ ,target])
+
   list_model <- list()
   a <- 0
   data$w <- rep(1/nrow(data), nrow(data))
@@ -123,9 +127,11 @@ rus <- function(formula, data, size, alg, ir = 1, rf.ntree = 50, svm.ker = "radi
 
 
 # SMOTEBoost
-sbo <- function(formula, data, size, alg, over = 100, rf.ntree = 50, svm.ker = "radial")
+sbo <- function(formula, data, size, alg, over = 100, smote.k = 5, rf.ntree = 50, svm.ker = "radial")
 {
   target <- gsub(" ", "", unlist(strsplit(format(formula), split = "~"))[1])
+  data[ ,target] <- as.factor(data[ ,target])
+
   list_model <- list()
   a <- 0
   n <- data[which(data[ ,target] == "0"), ]
@@ -135,8 +141,10 @@ sbo <- function(formula, data, size, alg, over = 100, rf.ntree = 50, svm.ker = "
   for(i in 1:size)
   {
     n <- data[which(data[ ,target] == "0"), ]
-    f <- reformulate(paste(colnames(data)[which(colnames(data) != target & colnames(data) != "w")], collapse = "+"), response = target)
-    smote <- DMwR::SMOTE(f, data = data, perc.over = over, perc.under = 0)
+    smote <- smotefamily::SMOTE(X = data[ ,colnames(data) != target], target = data[ ,target], K = smote.k, dup_size = round(over/100))
+    smote <- rbind(smote$orig_P, smote$syn_dat)
+    colnames(smote)[which(colnames(smote) == "class")] <- target # correct column name 'class' bug in package 'smotefamily'
+
     train <- rbind(n, smote)
     train$w <- train$w / sum(train$w) # normalize sample weights
     train <- train[sample(nrow(train), nrow(train), replace = TRUE, prob = train$w), ] # equivalent to pass w' to learner
@@ -173,18 +181,21 @@ sbo <- function(formula, data, size, alg, over = 100, rf.ntree = 50, svm.ker = "
 
 
 # SMOTEBagging
-sbag <- function(formula, data, size, alg, rf.ntree = 50, svm.ker = "radial")
+sbag <- function(formula, data, size, alg, smote.k = 5, rf.ntree = 50, svm.ker = "radial")
 {
   target <- gsub(" ", "", unlist(strsplit(format(formula), split = "~"))[1])
+  data[ ,target] <- as.factor(data[ ,target])
+
   list_train <- list()
   list_model <- list()
   b <- rep(seq(10, 100, 10), (size %/% 10 + 1))
   b <- b[1:size]  # b% detemining proportions of random over-sampling and SMOTE
   n <- data[which(data[ ,target] == "0"), ]
   p <- data[which(data[ ,target] == "1"), ]
-  smote <- DMwR::SMOTE(reformulate(".", response = target), data = data, perc.over = nrow(n)/nrow(p)*1000, perc.under = 0)
-  smote <- rbind(smote, p)
-  smote <- smote[which(!(duplicated(smote) | duplicated(smote, fromLast = TRUE) == TRUE)), ] # remove original minority instances. Keep only SMOTE ones.
+  smote <- smotefamily::SMOTE(X = data[ ,colnames(data) != target], target = data[ ,target], K = smote.k, dup_size = round(nrow(n)/nrow(p)*965/100))
+  smote <- smote$syn_data
+  colnames(smote)[which(colnames(smote) == "class")] <- target # correct column name 'class' bug in package 'smotefamily'
+
   for(i in 1:size) {
     resamp_rate <- nrow(n)/nrow(p) * (b[i] / 100)
     resamp <- p[sample(nrow(p), round(nrow(p) * resamp_rate), replace = TRUE), ] # random over-sampling
@@ -217,6 +228,8 @@ sbag <- function(formula, data, size, alg, rf.ntree = 50, svm.ker = "radial")
 ub <- function(formula, data, size, alg, ir = 1, rf.ntree = 50, svm.ker = "radial")
 {
   target <- gsub(" ", "", unlist(strsplit(format(formula), split = "~"))[1])
+  data[ ,target] <- as.factor(data[ ,target])
+
   list_train <- list()
   list_model <- list()
   for(i in 1:size) {
@@ -302,7 +315,7 @@ predict.modelBag <- function(object, newdata, type = "prob", ...)
   }
   else if(type == "prob") {
     return(prob)
-    }
+  }
 }
 
 
